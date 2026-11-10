@@ -5,6 +5,7 @@ import {calculate,normalize,growth,budgetLimit,insight,LIMITS} from './costs.js'
 import './styles.css';
 import {PlanningReview} from './PlanningReview.jsx';
 import {FUNCTION_PATH} from './deployment.js';
+import {readBackendResponse} from './backend-response.js';
 
 const money=(n,dec=2)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:dec}).format(n);
 const rate=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:4}).format(n);
@@ -42,12 +43,7 @@ function App(){
  async function api(action,payload={}){
   const target=new URL(endpoint,window.location.href);if(!['http:','https:'].includes(target.protocol))throw new Error('Use an HTTPS function URL.');if(target.origin!==location.origin&&target.protocol!=='https:')throw new Error('An external backend must use HTTPS.');
   const response=await fetch(target.href,{method:'POST',headers:{'Content-Type':'application/json',...(code?{'X-Demo-Code':code}:{})},body:JSON.stringify({action,...payload}),signal:AbortSignal.timeout(28000)});
-  let data;try{data=await response.json();}catch{throw new Error([400,404].includes(response.status)?'This address did not reach the AI backend. Use the pre-filled full function URL.':`The backend did not return JSON (HTTP ${response.status}).`);}
-  // A .json function URL wraps the HTTP response; accept that documented format too.
-  const wrapped=Number.isInteger(data?.statusCode)&&data?.body&&typeof data.body==='object',status=wrapped?data.statusCode:response.status,result=wrapped?data.body:data;
-  if(!response.ok||status>=400)throw new Error(result?.error||`Backend returned ${status}.`);
-  if(action==='status'&&(typeof result?.live!=='boolean'||typeof result?.model!=='string'))throw new Error('This URL did not return the AI backend status. Use the pre-filled full function URL.');
-  return result;
+  return readBackendResponse(response,action);
  }
  async function connect(){setApiBusy(true);try{const x=await api('status');setConnection(x);setNotice(x.live?'Connected. AI suggestions are available.':'Backend connected. Live AI is still disabled in server settings.');}catch(e){setConnection(null);setNotice(`Connection unavailable: ${e.message}`);}finally{setApiBusy(false);}}
  async function analyze(clarifications){if(!connection?.live){setShowConnect(true);return;}if(!Array.isArray(clarifications))setAnalysis(null);setBusy(true);setNotice('');try{const x=await api('analyze',{description,...(Array.isArray(clarifications)?{clarifications}:{})});setAnalysis(x);setNotice(x.stage==='questions'?'Answer these questions, or leave unknown details blank for labelled estimates.':'Your proposed base case is ready. Review it before applying.');}catch(e){setNotice(`AI could not analyze the app: ${e.message} Your existing assumptions are unchanged.`);}finally{setBusy(false);}}

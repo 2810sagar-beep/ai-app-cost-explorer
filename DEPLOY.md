@@ -51,9 +51,13 @@ The website’s old `/api` default is not the deployed function route. Live chec
 
 For the current app, the full URL is:
 
-`https://ai-app-cost-explorer-2-jjm8d.ondigitalocean.app/ai-app-cost-explorer-functions/explorer/api`
+`https://ai-app-cost-explorer-2-jjm8d.ondigitalocean.app/ai-app-cost-explorer-functions/explorer/api.json`
 
 Use it with the existing `DEMO_ACCESS_CODE`. A 401 response is a separate password check; a 400 routing response does not establish whether the password is correct. The frontend also accepts DigitalOcean’s `.json` response wrapper and explains HTML/XML routing errors. A custom deployment with a different component route still needs its own full function URL.
+
+The default now uses DigitalOcean's `.json` URL format, which returns the complete function response, including its error body and status. This helps preserve actionable model-key, account-tier, credit, and provider-timeout errors. The client checks the nested status, so a transport HTTP 200 cannot hide an authorization or inference error. See [DigitalOcean's JSON-only response documentation](https://docs.digitalocean.com/products/functions/reference/parameters-responses/#json-only-responses).
+
+Live verification on November 10 confirmed the demo password connects successfully at the full route. The first actual inference attempt returned a generic HTTP 504, so successful AI generation is still unverified. Do not infer a model-key problem from that response alone. After updating GitHub, use **Actions → Force rebuild and deploy** on the existing app if its static `web` component still shows `/api`; the existing public Git source may not automatically rebuild on a push. Wait for success and refresh the website. If the JSON endpoint still reports 504, inspect **Runtime Logs → api**, not the static site's build logs. No automatic inference retries are made.
 
 ## Where your new model key goes
 
