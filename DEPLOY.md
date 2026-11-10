@@ -33,6 +33,18 @@ The Node.js range is also pinned to `24.x`, matching the version shown in the bu
 
 `.do/static-app.yaml` is the equivalent static app specification. If the dashboard offers importing an app spec, use that file. The platform must validate the actual spec and pricing before any creation; local checks cannot verify your account allowances.
 
+## Fix “substitutions could not be resolved” in the Functions build
+
+This error happens while reading `project.yml`, before any request to Claude. The required values are not available in the environment of the Functions deployer; a missing or runtime-only setting can cause it. A variable name visible in App Settings does not establish that its value is available in the Functions build.
+
+1. Open **App Platform → ai-app-cost-explorer-2 → Settings → api (Functions) → Environment Variables → Edit**.
+2. Set `DO_MODEL_ACCESS_KEY` to your model key, `DEMO_ACCESS_CODE` to your existing private demo password, and `LIVE_AI_ENABLED` to the literal text `true` when ready for live calls.
+3. Use **Run and build time** scope for each. Encrypt the model key and demo password. Populate component-level values explicitly so an empty component override cannot hide an app-level value.
+4. Save and rebuild/redeploy from the latest `main`. The update adds non-secret defaults in `functions/.env`: the optional `DO_API_TOKEN` defaults to `disabled`, and `LIVE_AI_ENABLED` defaults to `false` if not supplied. Only the two secrets must be supplied for deployment; enable AI with `LIVE_AI_ENABLED=true`. There are no secret values in the tracked defaults file, and real build-time values take precedence.
+5. After deployment succeeds, copy the `explorer/api` function link from the component's Functions table into the website's connection dialog and enter the same private demo password.
+
+No additional platform API key is needed to build or use AI planning. An optional read-only `DO_API_TOKEN` can later override `disabled` to enable hosting-price refresh. The missing default was a repository configuration error; correcting it does not verify or change your account's Claude entitlement.
+
 ## Where your new model key goes
 
 Open **App Platform → your app → Settings → api (Functions) → Environment Variables → Edit → Add environment variable**. Paste the key only into `DO_MODEL_ACCESS_KEY`, select **Encrypt**, and use **Run and build time** scope. Add an encrypted `DEMO_ACCESS_CODE` of at least 16 random characters and set `LIVE_AI_ENABLED=true` when ready to test. Save and deploy the latest `main` revision for both components. If `api` is missing, follow section 2 first.
@@ -41,14 +53,14 @@ The website's Connections dialog takes the **public function URL** and your **pr
 
 ## 2. Add the serverless API
 
-1. In the app, choose **Add Resource → GitHub**, select the same repository and branch, and set the source directory to `/functions`.
+1. In the app, choose **Add components → Create resources from source code → GitHub**, select the same repository and branch, and set the source directory to `/functions`.
 2. Choose **Functions** as the resource type. This directory contains `project.yml` and the `explorer/api` function.
 3. Add these **component-level** variables, not frontend or app-wide variables:
 
 | Name | Value | Encrypt? |
 | --- | --- | --- |
 | `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `anthropic-claude-opus-5.5` | Yes |
-| `DO_API_TOKEN` | Optional for AI; token with `sizes:read` and `regions:read` enables the separate account price lookup | Yes |
+| `DO_API_TOKEN` | Optional; omit it to use the safe `disabled` default. A read-only token with `sizes:read` and `regions:read` enables hosting-price refresh. | Yes, if adding a real token |
 | `DEMO_ACCESS_CODE` | A new random password of at least 16 characters, used only for this demo | Yes |
 | `LIVE_AI_ENABLED` | `false` initially | No |
 
@@ -59,7 +71,7 @@ Use **Run and build time** scope on this Functions component so `project.yml` ca
 6. In the website's **Connections** page, enter that URL and your private demo access code. Click **Check connection**. It should connect with AI disabled.
 7. Click **Refresh DO hosting prices** to test read-only account integration. This reads available sizes in SYD1 and creates no resources. On failure, the app keeps its snapshot prices and explains the error.
 
-`.do/app.yaml` provides the equivalent two-component app template. All secret values are intentionally empty, so a freshly deployed backend is locked. You still need to populate the encrypted component variables.
+`.do/app.yaml` provides the equivalent two-component app template. Model and demo secret values are intentionally empty, so a freshly deployed backend is locked. The optional platform token defaults to `disabled`. You still need to populate the encrypted component variables.
 
 ## 3. Enable and test AI within the credit budget
 

@@ -33,7 +33,7 @@ npm run dev
 
 Open the localhost URL printed by the preview server. `npm test` checks calculation boundaries and backend protections. `npm run build` produces `dist/`, a static site with no runtime Node dependency.
 
-The development server executes the same backend handler as the Functions deployment. Credentials must be set in the server process environment. They are not loaded from a committed file or sent to the browser. An unconfigured backend fails closed. No credentials are needed to test the calculator.
+The development server executes the same backend handler as the Functions deployment. Credentials must be set in the server process environment. They are not loaded from a committed file or sent to the browser. An unconfigured backend fails closed. No credentials are needed to test the calculator. The tracked `functions/.env` contains only non-secret deployment defaults (`DO_API_TOKEN=disabled`, `LIVE_AI_ENABLED=false`). Supply credentials through encrypted Functions-component variables with Run and build time scope; those build-time values override the defaults. Never add secrets to the tracked defaults file.
 
 ## Comparison boundaries
 

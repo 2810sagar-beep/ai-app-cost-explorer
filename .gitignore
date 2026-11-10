@@ -3,5 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
+!functions/.env
 .openai/
 *.log

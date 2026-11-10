@@ -12,6 +12,7 @@ function clarifications(x){
  return x.map(({question,answer})=>({question,answer}));
 }
 function equal(a,b){const aa=Buffer.from(a),bb=Buffer.from(b);return aa.length===bb.length&&timingSafeEqual(aa,bb);}
+function platformToken(){const token=(process.env.DO_API_TOKEN||'').trim();return token.toLowerCase()==='disabled'?'':token;}
 async function llm(messages,max_tokens){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),23000);
  try{
@@ -40,11 +41,11 @@ async function main(args={}){
  if(key.length<12)return response(503,{error:'Configure a private DEMO_ACCESS_CODE of at least 12 characters on the backend.'});
  if(typeof supplied!=='string'||!equal(supplied,key))return response(401,{error:'The private demo code is missing or incorrect.'});
  const live=process.env.LIVE_AI_ENABLED==='true'&&Boolean(process.env.DO_MODEL_ACCESS_KEY);
- if(action==='status')return response(200,{live,sizes:Boolean(process.env.DO_API_TOKEN),model:MODEL});
+ if(action==='status')return response(200,{live,sizes:Boolean(platformToken()),model:MODEL});
  try{
   if(action==='sizes'){
-   if(!process.env.DO_API_TOKEN)return response(503,{error:'Configure the server-side read-only DO_API_TOKEN.'});
-   const r=await fetch('https://api.digitalocean.com/v2/sizes?per_page=200',{headers:{Authorization:`Bearer ${process.env.DO_API_TOKEN}`},signal:AbortSignal.timeout(10000)});
+   const token=platformToken();if(!token)return response(503,{error:'Configure the server-side read-only DO_API_TOKEN to enable the optional hosting-price lookup.'});
+   const r=await fetch('https://api.digitalocean.com/v2/sizes?per_page=200',{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(10000)});
    if(!r.ok)return response(502,{error:`DigitalOcean sizes API returned ${r.status}. Check sizes:read and regions:read permissions.`});
    const data=await r.json(),wanted=['s-1vcpu-2gb','s-2vcpu-4gb'];
    const sizes=(data.sizes||[]).filter(x=>wanted.includes(x.slug)&&x.available&&x.regions?.includes('syd1')&&Number.isFinite(x.price_monthly)).map(x=>({slug:x.slug,monthly:x.price_monthly,cpu:x.vcpus,memory:x.memory,disk:x.disk,transferGiB:x.transfer*1000}));

@@ -34,7 +34,7 @@ functions:
         scope: RUN_AND_BUILD_TIME
         type: SECRET
       - key: DO_API_TOKEN
-        value: ""
+        value: "disabled"
         scope: RUN_AND_BUILD_TIME
         type: SECRET
       - key: DEMO_ACCESS_CODE
