@@ -35,7 +35,7 @@ The Node.js range is also pinned to `24.x`, matching the version shown in the bu
 
 ## Fix “substitutions could not be resolved” in the Functions build
 
-This error happens while reading `project.yml`, before any request to Claude. The required values are not available in the environment of the Functions deployer; a missing or runtime-only setting can cause it. A variable name visible in App Settings does not establish that its value is available in the Functions build.
+This error happens while reading `project.yml`, before any inference request. The required values are not available in the environment of the Functions deployer; a missing or runtime-only setting can cause it. A variable name visible in App Settings does not establish that its value is available in the Functions build.
 
 1. Open **App Platform → ai-app-cost-explorer-2 → Settings → api (Functions) → Environment Variables → Edit**.
 2. Set `DO_MODEL_ACCESS_KEY` to your model key, `DEMO_ACCESS_CODE` to your existing private demo password, and `LIVE_AI_ENABLED` to the literal text `true` when ready for live calls.
@@ -43,7 +43,7 @@ This error happens while reading `project.yml`, before any request to Claude. Th
 4. Save and rebuild/redeploy from the latest `main`. The update adds non-secret defaults in `functions/.env`: the optional `DO_API_TOKEN` defaults to `disabled`, and `LIVE_AI_ENABLED` defaults to `false` if not supplied. Only the two secrets must be supplied for deployment; enable AI with `LIVE_AI_ENABLED=true`. There are no secret values in the tracked defaults file, and real build-time values take precedence.
 5. After deployment succeeds, copy the `explorer/api` function link from the component's Functions table into the website's connection dialog and enter the same private demo password.
 
-No additional platform API key is needed to build or use AI planning. An optional read-only `DO_API_TOKEN` can later override `disabled` to enable hosting-price refresh. The missing default was a repository configuration error; correcting it does not verify or change your account's Claude entitlement.
+No additional platform API key is needed to build or use AI planning. An optional read-only `DO_API_TOKEN` can later override `disabled` to enable hosting-price refresh. The missing default was a repository configuration error; correcting it does not verify or change your account's model entitlement.
 
 ## Fix HTTP 400 when checking the connection
 
@@ -73,7 +73,7 @@ The website's Connections dialog takes the **public function URL** and your **pr
 
 | Name | Value | Encrypt? |
 | --- | --- | --- |
-| `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `anthropic-claude-opus-5.5` | Yes |
+| `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `openai-gpt-oss-120b` or All models | Yes |
 | `DO_API_TOKEN` | Optional; omit it to use the safe `disabled` default. A read-only token with `sizes:read` and `regions:read` enables hosting-price refresh. | Yes, if adding a real token |
 | `DEMO_ACCESS_CODE` | A new random password of at least 16 characters, used only for this demo | Yes |
 | `LIVE_AI_ENABLED` | `false` initially | No |
@@ -90,10 +90,10 @@ Use **Run and build time** scope on this Functions component so `project.yml` ca
 ## 3. Enable and test AI within the credit budget
 
 1. In Billing, confirm the $5 promotional credit is eligible for Serverless Inference. Keep auto-reload disabled. An empty prepaid balance does not necessarily stop other billable cloud resources.
-2. Create a model access key in the DigitalOcean Model Access Keys page, scoped to Claude Opus 5.5. Confirm the model is available to your account. DigitalOcean currently excludes Anthropic models from Tier 1 and Tier 2; creating a scoped key does not override this account limit. Ask your DigitalOcean contact/support to confirm Claude access within the existing $5 budget if blocked. No separate Anthropic API key is required. Do not add funds or upgrade your tier just to test this demo without reviewing the cost.
+2. Keep the existing model access key if its Models column includes GPT OSS 120B or All models. Otherwise create a new key scoped to GPT OSS 120B (`openai-gpt-oss-120b`) and replace only `DO_MODEL_ACCESS_KEY`. Key scopes cannot be edited after creation. DigitalOcean allows GPT OSS 120B on lower account tiers that exclude Anthropic models. This model uses DigitalOcean-hosted inference; no separate OpenAI key is needed. Do not add funds or upgrade the account for this change.
 3. Set `LIVE_AI_ENABLED` to `true` on the Functions component and redeploy.
 4. Recheck the connection. Paste your application description and click **Plan my base case**. The AI asks up to three relevant usage questions if information is missing. Answer them, or leave unknown details blank for labelled estimates, and click **Create my base case**. Review the values, explanations and uncertainties, then click **Apply this base case**. Until you apply, the forecast stays unchanged. The AI never changes your active-user count, hosting, prices, budget, or comparison model.
-5. Optionally run one sample summarization to measure Claude’s billable input/output tokens. The result is for reference; the forecast’s GPT OSS models can tokenize and reason differently, so Claude measurements are not applied to them. The output token cap can cause an incomplete response on a reasoning-heavy sample; that returns an explicit error instead of fake results.
+5. Optionally run one sample summarization to measure GPT OSS 120B’s billable input/output tokens. The result is for reference and is not automatically applied to the forecast: validate whether the sample represents your average call and the selected model. The output token cap can cause an incomplete response on a reasoning-heavy sample; that returns an explicit error instead of fake results.
 
 Each AI action is one bounded request with no automatic retry. A planning flow uses one request if the description is complete, or two when clarifying questions are needed. Descriptions are limited to 3,000 characters, answers to three × 600 characters, and sample text to 6,000. Model completions are capped at 2,048 tokens for planning and 1,024 for sample measurement. A private code protects billable operations. There is no global hard spending limiter across serverless instances. Protect the code, keep the demo restricted, monitor your balance, and stop well before the $5 budget. Server-side keys and the demo access code are different credentials.
 
@@ -117,11 +117,16 @@ The frontend and backend handler can be tested locally without credit. Real infe
 - https://docs.digitalocean.com/products/inference/how-to/manage-model-access-keys/
 - https://docs.digitalocean.com/products/inference/how-to/manage-serverless-inference-prepayment/
 
-## Claude Opus 5.5 integration
+## GPT OSS 120B integration
 
-The backend now requests `anthropic-claude-opus-5.5` at `https://inference.do-ai.run/v1/messages`. It uses low adaptive-thinking effort without an explicit thinking budget or temperature override. Thinking blocks stay on the backend. This change needs a redeploy of the Functions component and frontend from the latest `main`; a model access key alone cannot change an older deployed revision. Existing environment variable names are unchanged. A successful connection check verifies backend configuration, not model entitlement: use one planning request to verify actual inference.
+The backend requests `openai-gpt-oss-120b` at `https://inference.do-ai.run/v1/chat/completions`, authenticating with the existing `DO_MODEL_ACCESS_KEY` as a Bearer token. It sends the full messages array, low reasoning effort, and bounded `max_completion_tokens`. Only completed final text and numeric token usage are returned; private reasoning and other provider metadata stay on the backend. Changing just the model identifier in the old Claude Messages request is insufficient.
+
+DigitalOcean's lower account tiers allow GPT OSS 120B, and its model documentation lists DigitalOcean-hosted Serverless Inference for this model. A key scoped to All models or GPT OSS 120B can remain unchanged. A Claude-only key must be replaced; scopes cannot be edited. In the Model Access Keys table, hover over the Models column to check the existing scope. Creating a scoped key does not override account-tier restrictions.
+
+Redeploy the Functions component and frontend from latest `main`; a successful connection check confirms configuration but not model authorization. Test one planning request after deployment. The earlier generic HTTP 504 was followed by a specific Claude account-tier error in the updated UI; the switch addresses that confirmed restriction. Actual GPT OSS inference remains unverified until a successful live request.
 
 Official references:
 - https://docs.digitalocean.com/products/inference/details/models/
-- https://docs.digitalocean.com/products/inference/how-to/use-messages-api/
+- https://docs.digitalocean.com/reference/api/reference/serverless-inference/
 - https://docs.digitalocean.com/products/inference/details/limits/
+- https://docs.digitalocean.com/products/inference/how-to/manage-model-access-keys/

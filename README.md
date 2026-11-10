@@ -49,7 +49,7 @@ Taxes, discounts, credits, databases, vector storage, embeddings, OCR, paid exte
 
 React static frontend → optional DigitalOcean Functions API → DigitalOcean inference / read-only sizes API.
 
-Pricing and formulas live in `src/catalog.js` and `src/costs.js`. The backend has no third-party dependencies. The server-side planning model is Claude Opus 5.5 (`anthropic-claude-opus-5.5`), accessed through DigitalOcean’s native Messages endpoint. Claude is a third-party commercial model; do not describe its weights as hosted on DigitalOcean infrastructure. The hypothetical GPT OSS model selected in the calculator is independent. Sample Claude token counts are shown for reference and are not automatically applied to the GPT OSS forecast.
+Pricing and formulas live in `src/catalog.js` and `src/costs.js`. The backend has no third-party dependencies. The server-side planning model is GPT OSS 120B (`openai-gpt-oss-120b`), accessed through DigitalOcean’s OpenAI-compatible Chat Completions endpoint and hosted on DigitalOcean infrastructure. It is available to lower account tiers that cannot use Claude. The existing model access key works if it includes this model or all models; a Claude-only key needs replacement because key scopes cannot be edited. The hypothetical model selected in the calculator remains independent. Sample token counts are shown for reference and are not automatically applied to the forecast.
 
 ## Budget and privacy
 
