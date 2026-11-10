@@ -33,6 +33,12 @@ The Node.js range is also pinned to `24.x`, matching the version shown in the bu
 
 `.do/static-app.yaml` is the equivalent static app specification. If the dashboard offers importing an app spec, use that file. The platform must validate the actual spec and pricing before any creation; local checks cannot verify your account allowances.
 
+## Where your new model key goes
+
+Open **App Platform → your app → Settings → api (Functions) → Environment Variables → Edit → Add environment variable**. Paste the key only into `DO_MODEL_ACCESS_KEY`, select **Encrypt**, and use **Run and build time** scope. Add an encrypted `DEMO_ACCESS_CODE` of at least 16 random characters and set `LIVE_AI_ENABLED=true` when ready to test. Save and deploy the latest `main` revision for both components. If `api` is missing, follow section 2 first.
+
+The website's Connections dialog takes the **public function URL** and your **private demo access code**. It never takes the model key. The read-only `DO_API_TOKEN` is optional for AI planning and is only needed for the separate hosting-price refresh.
+
 ## 2. Add the serverless API
 
 1. In the app, choose **Add Resource → GitHub**, select the same repository and branch, and set the source directory to `/functions`.
@@ -42,7 +48,7 @@ The Node.js range is also pinned to `24.x`, matching the version shown in the bu
 | Name | Value | Encrypt? |
 | --- | --- | --- |
 | `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `openai-gpt-oss-20b` | Yes |
-| `DO_API_TOKEN` | Token with `sizes:read` and `regions:read` | Yes |
+| `DO_API_TOKEN` | Optional for AI; token with `sizes:read` and `regions:read` enables the separate account price lookup | Yes |
 | `DEMO_ACCESS_CODE` | A new random password of at least 16 characters, used only for this demo | Yes |
 | `LIVE_AI_ENABLED` | `false` initially | No |
 
@@ -60,10 +66,10 @@ Use **Run and build time** scope on this Functions component so `project.yml` ca
 1. In Billing, confirm the $5 promotional credit is eligible for Serverless Inference. Keep auto-reload disabled. An empty prepaid balance does not necessarily stop other billable cloud resources.
 2. Create a model access key in the DigitalOcean Model Access Keys page, scoped to GPT OSS 20B. Confirm the model is available to your account. No OpenAI account or OpenAI API subscription is required.
 3. Set `LIVE_AI_ENABLED` to `true` on the Functions component and redeploy.
-4. Recheck the connection. Paste your application description, click **Suggest assumptions**, and review all suggested values. The AI does not determine the rates or cloud winner.
+4. Recheck the connection. Paste your application description and click **Plan my base case**. The AI asks up to three relevant usage questions if information is missing. Answer them, or leave unknown details blank for labelled estimates, and click **Create my base case**. Review the values, explanations and uncertainties, then click **Apply this base case**. Until you apply, the forecast stays unchanged. The AI never changes your active-user count, hosting, prices, budget, or comparison model.
 5. Optionally run one sample summarization to measure billable input/output tokens. The output token cap can cause an incomplete response on a reasoning-heavy sample; that returns an explicit error instead of fake results.
 
-Each AI action is one bounded request, with no automatic retry: descriptions max 3,000 characters; sample text max 6,000; model completions max 1,536 / 1,024 tokens. A private code protects billable operations. There is no global hard spending limiter across serverless instances. Protect the code, keep the demo restricted, monitor your balance, and stop well before the $5 budget. Server-side keys and the demo access code are different credentials.
+Each AI action is one bounded request with no automatic retry. A planning flow uses one request if the description is complete, or two when clarifying questions are needed. Descriptions are limited to 3,000 characters, answers to three × 600 characters, and sample text to 6,000. Model completions are capped at 2,048 tokens for planning and 1,024 for sample measurement. A private code protects billable operations. There is no global hard spending limiter across serverless instances. Protect the code, keep the demo restricted, monitor your balance, and stop well before the $5 budget. Server-side keys and the demo access code are different credentials.
 
 ## 4. After the interview
 

@@ -16,7 +16,7 @@ This button uses `.do/deploy.template.yaml` to explicitly select **Static Site**
 - Same-model DigitalOcean vs AWS inference, hosting, storage, and outbound-transfer estimates.
 - Interactive growth chart, cost per 1,000 tasks, budget thresholds, detailed formulas, and sources.
 - JSON scenario export/import and growth CSV export.
-- Optional DigitalOcean inference for assumptions and sample token measurement.
+- DigitalOcean inference can ask up to three workload questions, propose a base case with reasons and uncertainties, and apply it only after review. Optional sample token measurement.
 - Optional authenticated DigitalOcean size/price lookup, scoped to read-only API access.
 - Accessible keyboard controls, responsive layout, private backend demo code, and no frontend cloud secrets.
 
