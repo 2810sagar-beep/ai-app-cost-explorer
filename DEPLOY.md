@@ -47,7 +47,7 @@ The website's Connections dialog takes the **public function URL** and your **pr
 
 | Name | Value | Encrypt? |
 | --- | --- | --- |
-| `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `openai-gpt-oss-20b` | Yes |
+| `DO_MODEL_ACCESS_KEY` | Your model key, scoped to `anthropic-claude-opus-5.5` | Yes |
 | `DO_API_TOKEN` | Optional for AI; token with `sizes:read` and `regions:read` enables the separate account price lookup | Yes |
 | `DEMO_ACCESS_CODE` | A new random password of at least 16 characters, used only for this demo | Yes |
 | `LIVE_AI_ENABLED` | `false` initially | No |
@@ -64,10 +64,10 @@ Use **Run and build time** scope on this Functions component so `project.yml` ca
 ## 3. Enable and test AI within the credit budget
 
 1. In Billing, confirm the $5 promotional credit is eligible for Serverless Inference. Keep auto-reload disabled. An empty prepaid balance does not necessarily stop other billable cloud resources.
-2. Create a model access key in the DigitalOcean Model Access Keys page, scoped to GPT OSS 20B. Confirm the model is available to your account. No OpenAI account or OpenAI API subscription is required.
+2. Create a model access key in the DigitalOcean Model Access Keys page, scoped to Claude Opus 5.5. Confirm the model is available to your account. DigitalOcean currently excludes Anthropic models from Tier 1 and Tier 2; creating a scoped key does not override this account limit. Ask your DigitalOcean contact/support to confirm Claude access within the existing $5 budget if blocked. No separate Anthropic API key is required. Do not add funds or upgrade your tier just to test this demo without reviewing the cost.
 3. Set `LIVE_AI_ENABLED` to `true` on the Functions component and redeploy.
 4. Recheck the connection. Paste your application description and click **Plan my base case**. The AI asks up to three relevant usage questions if information is missing. Answer them, or leave unknown details blank for labelled estimates, and click **Create my base case**. Review the values, explanations and uncertainties, then click **Apply this base case**. Until you apply, the forecast stays unchanged. The AI never changes your active-user count, hosting, prices, budget, or comparison model.
-5. Optionally run one sample summarization to measure billable input/output tokens. The output token cap can cause an incomplete response on a reasoning-heavy sample; that returns an explicit error instead of fake results.
+5. Optionally run one sample summarization to measure Claude’s billable input/output tokens. The result is for reference; the forecast’s GPT OSS models can tokenize and reason differently, so Claude measurements are not applied to them. The output token cap can cause an incomplete response on a reasoning-heavy sample; that returns an explicit error instead of fake results.
 
 Each AI action is one bounded request with no automatic retry. A planning flow uses one request if the description is complete, or two when clarifying questions are needed. Descriptions are limited to 3,000 characters, answers to three × 600 characters, and sample text to 6,000. Model completions are capped at 2,048 tokens for planning and 1,024 for sample measurement. A private code protects billable operations. There is no global hard spending limiter across serverless instances. Protect the code, keep the demo restricted, monitor your balance, and stop well before the $5 budget. Server-side keys and the demo access code are different credentials.
 
@@ -90,3 +90,12 @@ The frontend and backend handler can be tested locally without credit. Real infe
 - https://docs.digitalocean.com/products/functions/details/pricing/
 - https://docs.digitalocean.com/products/inference/how-to/manage-model-access-keys/
 - https://docs.digitalocean.com/products/inference/how-to/manage-serverless-inference-prepayment/
+
+## Claude Opus 5.5 integration
+
+The backend now requests `anthropic-claude-opus-5.5` at `https://inference.do-ai.run/v1/messages`. It uses low adaptive-thinking effort without an explicit thinking budget or temperature override. Thinking blocks stay on the backend. This change needs a redeploy of the Functions component and frontend from the latest `main`; a model access key alone cannot change an older deployed revision. Existing environment variable names are unchanged. A successful connection check verifies backend configuration, not model entitlement: use one planning request to verify actual inference.
+
+Official references:
+- https://docs.digitalocean.com/products/inference/details/models/
+- https://docs.digitalocean.com/products/inference/how-to/use-messages-api/
+- https://docs.digitalocean.com/products/inference/details/limits/

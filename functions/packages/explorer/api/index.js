@@ -1,5 +1,5 @@
 const {timingSafeEqual}=require('node:crypto');
-const MODEL='openai-gpt-oss-20b';
+const MODEL='anthropic-claude-opus-5.5';
 const numeric={tasks:[0,1000],calls:[1,20],input:[1,32000],output:[1,8000],fileMB:[0,100],retention:[1,365],downloads:[0,100],retry:[0,100]};
 const headers={'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type, X-Demo-Code'};
 function response(statusCode,body){return {statusCode,headers,body};}
@@ -15,9 +15,20 @@ function equal(a,b){const aa=Buffer.from(a),bb=Buffer.from(b);return aa.length==
 async function llm(messages,max_tokens){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),23000);
  try{
-  const r=await fetch('https://inference.do-ai.run/v1/chat/completions',{method:'POST',headers:{Authorization:`Bearer ${process.env.DO_MODEL_ACCESS_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,messages,max_tokens,temperature:0.2,reasoning_effort:'low'}),signal:controller.signal});
-  if(!r.ok){const err=new Error(r.status===402?'Inference credit is unavailable. Check your DigitalOcean balance.':r.status===429?'DigitalOcean rate limit reached. Wait before trying again.':r.status===401||r.status===403?'Check the server-side model key and its model permissions.':`DigitalOcean inference returned ${r.status}.`);err.status=502;throw err;}
-  const data=await r.json();if(!data.choices?.[0]?.message?.content||data.choices[0].finish_reason==='length')throw new Error('The model did not return a complete response. No assumptions were applied.');return data;
+  // Opus 5.5 requires adaptive thinking. Use the native Messages format to avoid
+  // a compatibility adapter introducing an unsupported explicit thinking budget.
+  const r=await fetch('https://inference.do-ai.run/v1/messages',{method:'POST',headers:{'x-api-key':process.env.DO_MODEL_ACCESS_KEY,'anthropic-version':'2023-06-01','Content-Type':'application/json'},body:JSON.stringify({model:MODEL,system:messages.filter(m=>m.role==='system').map(m=>m.content).join('\n'),messages:messages.filter(m=>m.role!=='system'),max_tokens,output_config:{effort:'low'}}),signal:controller.signal});
+  if(!r.ok){
+   let tierBlocked=false;if(r.status===400||r.status===403){try{const body=await r.json();tierBlocked=/subscription tier|account tier|not available for your.*tier/i.test(String(body.error?.message||body.message||body.error||''));}catch{}}
+   const err=new Error(tierBlocked?'DigitalOcean account tier does not permit this model. Ask DigitalOcean support to confirm Claude access within your demo budget.':r.status===402?'Inference credit is unavailable. Check your DigitalOcean balance.':r.status===429?'DigitalOcean rate limit reached. Wait before trying again.':r.status===401||r.status===403?'Check the server-side model key and its Claude Opus 5.5 permissions.':`DigitalOcean inference returned ${r.status}.`);err.status=502;throw err;
+  }
+  const data=await r.json(),content=Array.isArray(data.content)?data.content.filter(b=>b.type==='text'&&typeof b.text==='string').map(b=>b.text).join('\n'):'';
+  // Thinking blocks never leave the backend. Incomplete or tool-only responses
+  // cannot become a workload proposal or token calibration.
+  if(!content.trim()||!['end_turn','stop_sequence'].includes(data.stop_reason))throw new Error('The model did not return a complete response. No assumptions were applied.');
+  const u=data.usage||{},inputTokens=Number.isFinite(u.input_tokens)?u.input_tokens+(u.cache_creation_input_tokens||0)+(u.cache_read_input_tokens||0):undefined;
+  const usage={prompt_tokens:inputTokens,completion_tokens:u.output_tokens};
+  return {choices:[{finish_reason:'stop',message:{content}}],usage};
  }finally{clearTimeout(timer);}
 }
 async function main(args={}){
