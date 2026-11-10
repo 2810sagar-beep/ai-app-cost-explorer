@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate,normalize,growth,budgetLimit} from '../src/costs.js';
+import {DEFAULTS,PRESETS,CATALOG} from '../src/catalog.js';
+const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
+test('worked example: 40k calls, 80M input, 20M output, exact provider rates',()=>{
+ const r=calculate(DEFAULTS);assert.equal(r.tasks,20000);assert.equal(r.calls,40000);assert.equal(r.input,80000000);assert.equal(r.output,20000000);
+ near(r.providers.do.inference,22);near(r.providers.aws.inference,24.72);near(r.providers.do.total,51);near(r.providers.aws.total,51.72);
+});
+test('AWS can win; estimator never forces a DigitalOcean advantage',()=>{const r=calculate(PRESETS[2].values);assert.equal(r.winner,'aws');assert.ok(r.providers.aws.inference<r.providers.do.inference);});
+test('zero tasks keeps hosting but no inference; disabled storage costs nothing',()=>{const r=calculate({...DEFAULTS,tasks:0,storage:false});near(r.providers.do.total,24);near(r.providers.aws.total,24);assert.equal(r.providers.do.per1000,0);assert.equal(r.winner,'tie');});
+test('file retention and provider byte units are explicit',()=>{const r=calculate({...DEFAULTS,retention:60});near(r.storageGB,80);near(r.storageGiB,80e9/(2**30));near(r.downloadGB,40);});
+test('storage chooses cheapest AWS bundle including overages',()=>{const r=calculate({...DEFAULTS,downloads:20});assert.equal(r.providers.aws.storagePlan,'Lightsail 250 GB bucket');near(r.providers.aws.transfer,300*.114);near(r.providers.do.transfer,0);});
+test('retries increase model usage only, not user tasks and retained uploads',()=>{const r=calculate({...DEFAULTS,retry:10});near(r.calls,44000);near(r.providers.do.inference,24.2);near(r.storageGB,40);});
+test('hosting does not silently autoscale with users',()=>{const a=calculate(DEFAULTS,1000),b=calculate(DEFAULTS,100000);near(a.providers.do.hosting,b.providers.do.hosting);near(b.providers.do.inference,a.providers.do.inference*100);});
+test('web egress overage respects separate inbound/outbound Lightsail rules',()=>{const r=calculate({...DEFAULTS,tasks:1,users:1000,storage:false,trafficMB:1,inboundGB:3000});near(r.providers.aws.webTransfer,.114);near(r.providers.do.webTransfer,0);});
+test('untrusted inputs normalize safely and model identifiers cannot escape catalog',()=>{const s=normalize({users:Infinity,tasks:-5,input:NaN,output:1e99,model:'__proto__',hosting:'constructor'});assert.equal(s.users,1000);assert.equal(s.tasks,0);assert.equal(s.input,2000);assert.equal(s.output,8000);assert.equal(s.model,DEFAULTS.model);assert.equal(s.hosting,DEFAULTS.hosting);});
+test('budget crossover is exact to one user under selected configuration',()=>{const n=budgetLimit(DEFAULTS,'do');assert.ok(calculate(DEFAULTS,n).providers.do.total<=250);assert.ok(calculate(DEFAULTS,n+1).providers.do.total>250);});
+test('budget accounts for infrastructure floor and workload-free case',()=>{assert.equal(budgetLimit({...DEFAULTS,budget:1},'do'),0);assert.equal(budgetLimit({...DEFAULTS,tasks:0,storage:false,budget:30},'do'),null);});
+test('live hosting prices propagate into growth and budget calculations',()=>{const c=structuredClone(CATALOG);c.hosting.standard.do.monthly=100;assert.equal(growth(DEFAULTS,c).find(x=>x.users===1000).providers.do.hosting,100);assert.ok(budgetLimit(DEFAULTS,'do',c)<budgetLimit(DEFAULTS,'do'));});

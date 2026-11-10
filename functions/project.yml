@@ -1,0 +1,15 @@
+environment:
+  DO_MODEL_ACCESS_KEY: "${DO_MODEL_ACCESS_KEY}"
+  DO_API_TOKEN: "${DO_API_TOKEN}"
+  DEMO_ACCESS_CODE: "${DEMO_ACCESS_CODE}"
+  LIVE_AI_ENABLED: "${LIVE_AI_ENABLED}"
+packages:
+  - name: explorer
+    functions:
+      - name: api
+        runtime: nodejs:22
+        web: true
+        limits:
+          timeout: 30000
+          memory: 256
+          logs: 64
