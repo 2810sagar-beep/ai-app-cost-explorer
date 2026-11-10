@@ -23,7 +23,7 @@ functions:
       deploy_on_push: false
     source_dir: /functions
     routes:
-      - path: /api
+      - path: /ai-app-cost-explorer-functions
     envs:
       - key: LIVE_AI_ENABLED
         value: "false"

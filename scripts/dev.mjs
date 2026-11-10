@@ -2,6 +2,7 @@ import {build} from 'esbuild';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {main as backend} from '../functions/packages/explorer/api/index.js';
+import {FUNCTION_PATH} from '../src/deployment.js';
 const portArg=process.argv.indexOf('--port');
 const port=Number(process.env.PORT||(portArg>=0?process.argv[portArg+1]:3000));
 createServer(async(req,res)=>{
@@ -10,7 +11,7 @@ createServer(async(req,res)=>{
   if(url.pathname==='/_responsive'){
    res.writeHead(200,{'Content-Type':'text/html'});res.end('<!doctype html><html lang="en"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mobile layout QA</title><body style="margin:0;background:#e5eaf2;font:14px system-ui;padding:20px"><p>Mobile viewport · 390 × 844</p><iframe title="Mobile app preview" src="/" width="390" height="844" style="border:1px solid #ccd5e3;border-radius:8px;background:white"></iframe></body></html>');return;
   }
-  if(url.pathname==='/api'||url.pathname==='/api/'){
+  if([FUNCTION_PATH,FUNCTION_PATH+'/', '/api','/api/'].includes(url.pathname)){
    let body='';for await(const chunk of req){body+=chunk;if(body.length>16000){res.writeHead(413);res.end();return;}}
    let args={};try{args=body?JSON.parse(body):{};}catch{res.writeHead(400);res.end('Invalid JSON');return;}
    const result=await backend({...args,__ow_method:req.method.toLowerCase(),__ow_headers:req.headers});

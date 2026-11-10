@@ -45,6 +45,16 @@ This error happens while reading `project.yml`, before any request to Claude. Th
 
 No additional platform API key is needed to build or use AI planning. An optional read-only `DO_API_TOKEN` can later override `disabled` to enable hosting-price refresh. The missing default was a repository configuration error; correcting it does not verify or change your account's Claude entitlement.
 
+## Fix HTTP 400 when checking the connection
+
+The website’s old `/api` default is not the deployed function route. Live checks confirmed `/api` returns HTTP 400 with “Couldn’t route the request”, while the full function endpoint correctly returns HTTP 401 when no demo password is supplied. The frontend now pre-fills the full URL on its current origin using `/ai-app-cost-explorer-functions/explorer/api`, matching this app’s actual ingress route. The local development server accepts the same path, and `.do/app.yaml` now uses the matching component route.
+
+For the current app, the full URL is:
+
+`https://ai-app-cost-explorer-2-jjm8d.ondigitalocean.app/ai-app-cost-explorer-functions/explorer/api`
+
+Use it with the existing `DEMO_ACCESS_CODE`. A 401 response is a separate password check; a 400 routing response does not establish whether the password is correct. The frontend also accepts DigitalOcean’s `.json` response wrapper and explains HTML/XML routing errors. A custom deployment with a different component route still needs its own full function URL.
+
 ## Where your new model key goes
 
 Open **App Platform → your app → Settings → api (Functions) → Environment Variables → Edit → Add environment variable**. Paste the key only into `DO_MODEL_ACCESS_KEY`, select **Encrypt**, and use **Run and build time** scope. Add an encrypted `DEMO_ACCESS_CODE` of at least 16 random characters and set `LIVE_AI_ENABLED=true` when ready to test. Save and deploy the latest `main` revision for both components. If `api` is missing, follow section 2 first.
