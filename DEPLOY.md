@@ -1,11 +1,29 @@
 # Deploy without writing code
 
-The app is ready to build from this repository. It has not yet been deployed to your DigitalOcean account. This walkthrough uses App Platform's dashboard; no terminal is required.
+The app is ready to build from this repository. This walkthrough uses App Platform's dashboard; no terminal is required. Its frontend is a **Static Site**, not a Node Web Service. The backend is a separate Functions component.
+
+## Repair the lionfish-app deployment
+
+The supplied November 10 logs show that commit `b47cc64` built successfully and produced `dist/`. They also show “This app may not specify any way to start a node process” and “no default process type”, followed by an application-container upload. That points to a Node Web Service configuration for the static frontend; the build itself did not fail. Runtime/deployment logs would confirm the final startup error.
+
+### Repair the existing app
+
+1. Open `lionfish-app` in App Platform and inspect its frontend component's resource type. It should be **Static Site**.
+2. If the component editor allows changing the type, select **Static Site**, set build command `npm ci && npm run build`, and output directory `dist`. A static site needs no run command or listening port.
+3. If the existing component cannot change type, use **Settings → App Spec → Edit**. In that existing specification, replace only the frontend entry under `services:` with the equivalent entry under `static_sites:`, retaining its name, GitHub repository/branch, and routes. Set `output_dir: dist`; remove the frontend's `run_command`, HTTP/health-check settings, instance count, and instance size. Preserve any Functions component, domains, environment variables, and other unrelated app settings.
+4. If you want help with the spec, share its non-secret configuration or a screenshot of the component settings. Do not share secret variable values. Do not replace the entire app specification blindly if it already contains other resources.
+5. Check that the proposed frontend hosting cost is $0/month within the free static allowance, save, and deploy. A commit to the repository cannot automatically convert a component already saved as a Web Service.
+
+### Alternative: a new static-only app
+
+Use the **Deploy to DigitalOcean** button in the repository README. The official template explicitly selects a Static Site, so the frontend is not detected as a long-running Node service. This creates a new app; it does not change `lionfish-app`. After the replacement works, remove the unused failed web-service component/app in the dashboard if you no longer need it, so it cannot continue incurring charges. Confirm its identity before deleting anything.
+
+The Node.js range is also pinned to `24.x`, matching the version shown in the build logs. That removes the wide-range warning; the warning was not the deployment failure.
 
 ## 1. Deploy the static calculator first
 
 1. Sign in to your existing DigitalOcean account and select the team with your $5 credit.
-2. Open **App Platform → Create App**, choose GitHub, and authorize access to `2810sagar-beep/ai-app-cost-explorer`.
+2. Prefer the **Deploy to DigitalOcean** button in the repository README, which loads `.do/deploy.template.yaml`. If creating manually, open **App Platform → Create App**, choose GitHub, and authorize access to `2810sagar-beep/ai-app-cost-explorer`.
 3. Select branch `main`, source directory `/`.
 4. Set the component type to **Static Site**. Do **not** leave it as a paid Node Web Service.
 5. Build command: `npm ci && npm run build`. Output directory: `dist`.
@@ -58,6 +76,8 @@ The frontend and backend handler can be tested locally without credit. Real infe
 ## Official references
 
 - https://docs.digitalocean.com/products/app-platform/how-to/create-apps/
+- https://docs.digitalocean.com/products/app-platform/how-to/add-deploy-do-button/
+- https://docs.digitalocean.com/products/app-platform/how-to/update-app-spec/
 - https://docs.digitalocean.com/products/app-platform/how-to/manage-functions/
 - https://docs.digitalocean.com/products/functions/reference/project-configuration/
 - https://docs.digitalocean.com/products/app-platform/details/pricing/

@@ -2,6 +2,14 @@
 
 Describe an AI application, review its workload assumptions, and inspect DigitalOcean and AWS cost forecasts as usage grows. Every estimate comes from formulas and a sourced price catalog. AI suggests assumptions; it cannot set prices or calculate bills.
 
+## Deploy the frontend as a Static Site
+
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/2810sagar-beep/ai-app-cost-explorer/tree/main)
+
+This button uses `.do/deploy.template.yaml` to explicitly select **Static Site**, build the app, and publish `dist/`. Review the proposed price: the frontend should be $0/month within your team's free static-site allowance. The template does not create a paid Node service, database, or bucket. Add the protected Functions backend separately using [DEPLOY.md](DEPLOY.md).
+
+**Existing `lionfish-app` deployment:** a successful build followed by “no default process type” points to the frontend being configured as a Node Web Service. Redeploying code alone does not change an existing component's type. Follow the [deployment repair steps](DEPLOY.md#repair-the-lionfish-app-deployment) before retrying. The button creates a new app; it does not repair or remove the existing one.
+
 ## Current functionality
 
 - Working manual calculator and three editable example scenarios.
@@ -12,11 +20,11 @@ Describe an AI application, review its workload assumptions, and inspect Digital
 - Optional authenticated DigitalOcean size/price lookup, scoped to read-only API access.
 - Accessible keyboard controls, responsive layout, private backend demo code, and no frontend cloud secrets.
 
-Live AI and platform access are **unconnected until server credentials are configured**. The manual calculator uses published price snapshots. The first version has not been deployed to DigitalOcean; see [DEPLOY.md](DEPLOY.md).
+Live AI and platform access are **unconnected until server credentials are configured**. The manual calculator uses published price snapshots. Live deployment status must be verified in your DigitalOcean account; see [DEPLOY.md](DEPLOY.md).
 
 ## Run locally
 
-Requires Node.js 22 or later.
+Uses Node.js 24.x for the frontend build and checks. The separately deployed Functions backend uses its declared Node.js 22 runtime.
 
 ```sh
 npm ci
